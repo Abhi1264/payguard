@@ -1,0 +1,10 @@
+{
+  "properties": [
+    {
+      "name": "api.token",
+      "type": "java.lang.String",
+      "description": "Bearer token required on API calls, except health checks.",
+      "defaultValue": "local"
+    }
+  ]
+}

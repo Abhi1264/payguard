@@ -1,0 +1,49 @@
+{
+  "mappings": [
+    {
+      "priority": 5,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/authorize"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "transformers": ["response-template"],
+        "body": "{\"transactionId\":\"txn-{{randomValue length=16 type='ALPHANUMERIC'}}\",\"status\":\"AUTHORIZED\"}"
+      }
+    },
+    {
+      "priority": 5,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/capture"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "transformers": ["response-template"],
+        "body": "{\"transactionId\":\"{{jsonPath request.body '$.transactionId'}}\",\"status\":\"CAPTURED\"}"
+      }
+    },
+    {
+      "priority": 5,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/refunds"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "transformers": ["response-template"],
+        "body": "{\"refundId\":\"ref-{{randomValue length=12 type='ALPHANUMERIC'}}\",\"status\":\"REFUNDED\"}"
+      }
+    }
+  ]
+}

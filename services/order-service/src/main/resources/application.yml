@@ -1,0 +1,44 @@
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/payguard}
+    username: ${DB_USERNAME:payguard}
+    password: ${DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    defer-datasource-initialization: true
+    properties:
+      "[hibernate.default_schema]": ordersvc
+      "[hibernate.jdbc.time_zone]": UTC
+  sql:
+    init:
+      mode: always
+  web:
+    resources:
+      add-mappings: false
+
+services:
+  user-url: ${USER_SERVICE_URL:http://localhost:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+api:
+  token: ${API_TOKEN:local}
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %5p [%X{requestId}] %logger{36} - %msg%n"
