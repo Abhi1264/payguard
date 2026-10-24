@@ -16,7 +16,7 @@ jobs:
           java-version: "26"
           cache: maven
       - name: Unit tests
-        run: mvn -B -pl services/order-service,services/payment-service test
+        run: mvn -B -pl services/order-service,services/payment-service -am test
       - name: Package
         run: mvn -B -DskipTests package
       - name: Smoke and contract

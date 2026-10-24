@@ -71,12 +71,12 @@ public final class PayGuardExtension implements BeforeAllCallback, AfterTestExec
         boolean payment = healthy(Config.paymentServiceUrl() + "/actuator/health");
         if (user && order && payment) {
             if (!healthy(Config.wiremockUrl() + "/__admin/mappings")) {
-                throw new IllegalStateException("PayGuard services are up but WireMock is not. Run make down, then make up.");
+                throw new IllegalStateException("PayGuard services are up but WireMock is not. Run docker compose down -v, then docker compose up -d --build --wait.");
             }
             return true;
         }
         if (user || order || payment) {
-            throw new IllegalStateException("PayGuard is only partly up. Run make down, then make up.");
+            throw new IllegalStateException("PayGuard is only partly up. Run docker compose down -v, then docker compose up -d --build --wait.");
         }
         return false;
     }

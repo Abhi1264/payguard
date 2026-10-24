@@ -1,6 +1,8 @@
-package com.payguard.order;
+package com.payguard.common;
 
 public class ApiException extends RuntimeException {
+
+    private static final long serialVersionUID = 1L;
 
     private final int status;
     private final String code;

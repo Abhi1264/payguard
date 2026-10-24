@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,8 +22,11 @@ public class PaymentController {
     }
 
     @PostMapping
-    public ResponseEntity<PaymentResponse> create(@Valid @RequestBody CreatePaymentRequest request) {
-        return ResponseEntity.status(201).body(payments.create(request));
+    public ResponseEntity<PaymentResponse> create(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody CreatePaymentRequest request) {
+        PaymentService.Outcome outcome = payments.create(request, idempotencyKey);
+        return ResponseEntity.status(outcome.status()).body(outcome.body());
     }
 
     @GetMapping("/{id}")

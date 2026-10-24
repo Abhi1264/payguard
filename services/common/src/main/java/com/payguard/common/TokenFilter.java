@@ -1,4 +1,4 @@
-package com.payguard.payment;
+package com.payguard.common;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

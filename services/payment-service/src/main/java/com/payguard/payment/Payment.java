@@ -39,6 +39,9 @@ public class Payment {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "idempotency_key", length = 64)
+    private String idempotencyKey;
+
     public UUID getId() {
         return id;
     }
@@ -109,5 +112,13 @@ public class Payment {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
     }
 }

@@ -9,8 +9,14 @@ CREATE TABLE IF NOT EXISTS paymentsvc.payments (
     status VARCHAR(20) NOT NULL,
     provider_transaction_id VARCHAR(64),
     authorized_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+    idempotency_key VARCHAR(64)
 );
+
+ALTER TABLE paymentsvc.payments ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(64);
+
+CREATE UNIQUE INDEX IF NOT EXISTS payments_idempotency_idx
+    ON paymentsvc.payments (idempotency_key);
 
 CREATE UNIQUE INDEX IF NOT EXISTS payments_open_order_idx
     ON paymentsvc.payments (order_id)

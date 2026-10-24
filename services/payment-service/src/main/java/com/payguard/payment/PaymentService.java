@@ -1,6 +1,8 @@
 package com.payguard.payment;
 
+import com.payguard.common.ApiException;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +26,15 @@ public class PaymentService {
         this.provider = provider;
     }
 
-    public PaymentResponse create(CreatePaymentRequest request) {
+    public Outcome create(CreatePaymentRequest request, String idempotencyKey) {
+        String key = idempotencyKey(idempotencyKey);
+        if (key != null) {
+            Optional<Payment> existing = payments.findByIdempotencyKey(key);
+            if (existing.isPresent()) {
+                sameCharge(existing.get(), request);
+                return new Outcome(PaymentResponse.from(existing.get()), 200);
+            }
+        }
         users.requireExists(request.userId());
         OrderView order = orders.get(request.orderId());
         if (!order.userId().equals(request.userId())) {
@@ -50,10 +60,19 @@ public class PaymentService {
         payment.setAmount(request.amount());
         payment.setCurrency(request.currency());
         payment.setStatus(PaymentRules.PENDING);
+        payment.setIdempotencyKey(key);
         payment.setCreatedAt(Instant.now());
         try {
             payments.saveAndFlush(payment);
         } catch (DataIntegrityViolationException ex) {
+            // ponytail: a raced replay can still be PENDING; GET until the status is terminal
+            if (key != null) {
+                Optional<Payment> existing = payments.findByIdempotencyKey(key);
+                if (existing.isPresent()) {
+                    sameCharge(existing.get(), request);
+                    return new Outcome(PaymentResponse.from(existing.get()), 200);
+                }
+            }
             throw new ApiException(409, "CONFLICT", "Order already has a payment");
         }
 
@@ -70,7 +89,7 @@ public class PaymentService {
             log.warn("provider call failed for payment {}: {}", payment.getId(), ex.getMessage());
             payment.setStatus(PaymentRules.FAILED);
             payments.saveAndFlush(payment);
-            return PaymentResponse.from(payment);
+            return new Outcome(PaymentResponse.from(payment), 201);
         }
 
         try {
@@ -79,7 +98,31 @@ public class PaymentService {
             log.warn("order update failed for payment {}: {}", payment.getId(), ex.getMessage());
             compensate(payment);
         }
-        return PaymentResponse.from(payment);
+        return new Outcome(PaymentResponse.from(payment), 201);
+    }
+
+    static String idempotencyKey(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String key = raw.trim();
+        if (key.length() > 64) {
+            throw new ApiException(400, "VALIDATION_ERROR", "Idempotency key is too long");
+        }
+        return key;
+    }
+
+    static void sameCharge(Payment payment, CreatePaymentRequest request) {
+        boolean same = payment.getOrderId().equals(request.orderId())
+                && payment.getUserId().equals(request.userId())
+                && payment.getAmount().compareTo(request.amount()) == 0
+                && payment.getCurrency().equals(request.currency());
+        if (!same) {
+            throw new ApiException(409, "CONFLICT", "Idempotency key was used for a different payment");
+        }
+    }
+
+    public record Outcome(PaymentResponse body, int status) {
     }
 
     private void compensate(Payment payment) {

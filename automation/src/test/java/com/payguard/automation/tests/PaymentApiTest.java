@@ -215,6 +215,37 @@ class PaymentApiTest extends PayGuardTest {
         assertEquals("CREATED", orders.get(order.id()).as(OrderResponse.class).status());
     }
 
+    @Test
+    @Tag("regression")
+    void shouldReturnTheSamePaymentForAnIdempotencyKey() {
+        UserResponse user = given.user();
+        OrderResponse order = given.order(user.id());
+        var request = PaymentFactory.valid(user.id(), order.id());
+        String key = order.id().toString();
+
+        ApiResult first = payments.create(request, key);
+        ApiResult second = payments.create(request, key);
+
+        assertEquals(201, first.status(), first.body());
+        assertEquals(200, second.status(), second.body());
+        assertEquals(first.as(PaymentResponse.class).id(), second.as(PaymentResponse.class).id());
+    }
+
+    @Test
+    @Tag("negative")
+    @Tag("regression")
+    void shouldRejectAnIdempotencyKeyReusedForAnotherOrder() {
+        UserResponse user = given.user();
+        OrderResponse order = given.order(user.id());
+        OrderResponse other = given.order(user.id());
+        String key = order.id().toString();
+        ApiResult first = payments.create(PaymentFactory.valid(user.id(), order.id()), key);
+        assertEquals(201, first.status(), first.body());
+
+        PayGuardAssertions.error(
+                payments.create(PaymentFactory.valid(user.id(), other.id()), key), 409, "CONFLICT");
+    }
+
     private PaymentResponse captured() {
         UserResponse user = given.user();
         OrderResponse order = given.order(user.id());

@@ -1,5 +1,7 @@
 package com.payguard.payment;
 
+import com.payguard.common.ApiException;
+import com.payguard.common.Correlation;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -20,7 +22,7 @@ public class UserClient {
             restClient.get()
                     .uri("/users/{id}", userId)
                     .header(Correlation.HEADER, Correlation.current())
-                    .exchange((request, response) -> {
+                    .exchange((_, response) -> {
                         if (response.getStatusCode().value() == 404) {
                             throw new ApiException(404, "NOT_FOUND", "User not found");
                         }

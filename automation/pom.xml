@@ -16,12 +16,12 @@
 
     <properties>
         <rest-assured.version>6.0.1</rest-assured.version>
-        <cucumber.version>7.34.9</cucumber.version>
         <allure.version>3.0.0</allure.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <wiremock.version>3.13.2</wiremock.version>
         <jackson.version>3.2.3</jackson.version>
         <postgresql.version>42.7.13</postgresql.version>
+        <skipTests>false</skipTests>
     </properties>
 
     <dependencies>
@@ -55,31 +55,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.cucumber</groupId>
-            <artifactId>cucumber-java</artifactId>
-            <version>${cucumber.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.platform</groupId>
-            <artifactId>junit-platform-suite</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.cucumber</groupId>
-            <artifactId>cucumber-junit-platform-engine</artifactId>
-            <version>${cucumber.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>io.qameta.allure</groupId>
             <artifactId>allure-jupiter</artifactId>
-            <version>${allure.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-cucumber7-jvm</artifactId>
             <version>${allure.version}</version>
             <scope>test</scope>
         </dependency>
@@ -124,6 +101,33 @@
                 <configuration>
                     <skipIfEmpty>true</skipIfEmpty>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <?m2e ignore?>
+                        <id>compose-up</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skipTests}</skip>
+                            <executable>docker</executable>
+                            <workingDirectory>${project.basedir}/..</workingDirectory>
+                            <arguments>
+                                <argument>compose</argument>
+                                <argument>up</argument>
+                                <argument>-d</argument>
+                                <argument>--build</argument>
+                                <argument>--wait</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -1,4 +1,4 @@
-package com.payguard.payment;
+package com.payguard.common;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;

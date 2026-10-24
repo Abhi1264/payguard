@@ -43,22 +43,21 @@ A passing test checks the status code, the JSON shape, and the business fields. 
 
 WireMock stands in for the card provider. Tests do not call a real processor. Failure stubs match `orderId`, so one test can decline or time out without changing the default success stub used by the others.
 
-Testcontainers starts `docker-compose.yml` when the services are not already healthy. If `make up` is already running, the suite uses that stack.
+Testcontainers starts `docker-compose.yml` when the services are not already healthy. If that stack is already healthy, the suite uses it.
 
 Retries cover connection failures only, twice, with a short backoff. A 400 or a 409 is a test failure and is not retried.
 
 JUnit runs test classes in parallel and methods in a class on one thread. Each test uses its own user, order, and payment. Do not add a global WireMock reset; that would race.
 
-A local `mvn -pl automation test` of the API classes took 9.5s with parallel classes and 9.2s sequential. Parallel execution did not make this suite faster.
-
 ## Repository structure
 
 ```
 payguard/
+  services/common
   services/user-service
   services/order-service
   services/payment-service
-  automation/          REST Assured clients, schemas, features, JDBC checks
+  automation/          REST Assured clients, schemas, JDBC checks
   docker/              Postgres init and WireMock default stubs
   docker-compose.yml
   .github/workflows/tests.yml
@@ -71,59 +70,51 @@ Automation packages:
 - `fixtures` — `UserFactory`, `OrderFactory`, `PaymentFactory`, provider stubs
 - `assertions` — status/error checks, JSON Schema, database status
 - `database` — short JDBC helper
-- `steps` — Cucumber steps for the two end-to-end features
 - `support` — starts the stack and attaches the last HTTP exchange on failure
 
 ## Running locally
 
-Java 26, Maven, and Docker are required.
+Java 26, Maven, and Docker are required. Docker has to run Linux containers. From the repo root:
 
 ```
-make build
-make up
-make test
+mvn -B verify
 ```
 
-`make up` builds the jars, builds the images, and waits until the health checks pass.
+That packages the services, starts Compose, and runs the tests. The same command works in cmd.exe, PowerShell, and a Unix shell. After a payment-schema change, run `docker compose down -v` once before `mvn -B verify` so Postgres is recreated.
 
 Default URLs are in `.env.example`. Copy it to `.env` if you want different ports. The tests read environment variables and fall back to those defaults. Local Postgres uses trust authentication, so there is no database password. API calls send `Authorization: Bearer local`.
 
 ## Running tests
 
 ```
-make test          # automation module, 34 tests
-make smoke         # @smoke
-make regression    # full automation module
-make report        # allure serve, if the Allure CLI is installed
-make down
-make clean
+mvn -B verify "-Dsurefire.groups=smoke"
+mvn -B -pl "services/order-service,services/payment-service" -am test
+allure serve automation/target/allure-results
+docker compose down -v
+mvn -B clean
 ```
 
-Service unit tests, which do not need Docker:
-
-```
-mvn -pl services/order-service,services/payment-service test
-```
+The first command is `@smoke`. Quote `-D` and `-pl` values in PowerShell. The unit-test command does not start Docker. `allure serve` needs the Allure CLI on `PATH` (`allure` or `allure.bat`).
 
 ## Test categories
 
 Tags overlap. A test is counted once by Surefire and may carry more than one tag.
 
-From a local run with the stack already up:
+Counted from the test methods:
 
-- service unit tests: 3
-- automation tests: 34, skipped: 0
+- service unit tests: 5
+- automation tests: 34
 
 Tag counts on those 34:
 
 | Tag | Tests |
 | --- | --- |
-| smoke | 4 |
+| smoke | 3 |
 | contract | 4 |
-| regression | 11 |
+| regression | 13 |
 | negative | 26 |
-| e2e | 4 |
-| integration | 4 |
+| e2e | 2 |
+| integration | 2 |
 
 `@smoke` is the happy path: create a user, create an order, pay, refund.
 `@regression` is the broader API cases.
@@ -131,7 +122,7 @@ Tag counts on those 34:
 `@contract` checks the JSON Schema as well as the values.
 `@e2e` and `@integration` are the flows that also read PostgreSQL.
 
-Cucumber covers two scenarios: the refund lifecycle, and a declined authorization. The same flows exist as JUnit tests. The Gherkin files are the readable business cases; the JUnit tests hold the rest.
+Send `Idempotency-Key` on `POST /payments` to replay the same charge. The first call is 201. The same key and body is 200 with the same payment id. The same key with a different order, user, amount, or currency is 409. A key longer than 64 characters is 400. Without a key, a second payment for an open order is 409.
 
 ## CI/CD
 
@@ -145,9 +136,9 @@ The workflow starts Docker itself through Testcontainers. It does not call a sep
 
 ## Reporting
 
-Allure 3 records the JUnit tests and the Cucumber scenarios, including the request and response captured by the REST Assured filter. On failure, the suite also attaches the recent HTTP exchanges and, when the test recorded them, the payment and order rows. The bearer token is redacted. The Allure environment file lists service URLs only.
+Allure 3 records the JUnit tests, including the request and response captured by the REST Assured filter. On failure, the suite also attaches the recent HTTP exchanges and, when the test recorded them, the payment and order rows. The bearer token is redacted. The Allure environment file lists service URLs only.
 
-`make report` serves `automation/target/allure-results` when the `allure` command is on the path.
+`allure serve automation/target/allure-results` opens the report when the Allure CLI is on the path.
 
 ## Design decisions
 
@@ -161,7 +152,7 @@ Database checks exist because a payment can be `CAPTURED` in the response while 
 
 Retries stay narrow so a wrong status code cannot pass on a second try.
 
-Smoke and regression are separate so a pull request can run the happy path and the schema checks without the timeout case and the rest of the negative matrix. `make regression` runs everything.
+Smoke and regression are separate so a pull request can run the happy path and the schema checks without the timeout case and the rest of the negative matrix. The full automation module is the regression run.
 
 A failed provider call still returns 201. The payment row was created; `status` is `FAILED` and the order stays `CREATED`. That is the outcome the tests assert.
 
@@ -172,4 +163,4 @@ A failed provider call still returns 201. The payment row was created; `status` 
 - One shared bearer token for callers and for service-to-service calls. There are no user accounts.
 - If the order update fails after capture, the payment service retries it, then refunds the provider and stores the payment as `FAILED`. If that refund also fails, the payment stays `CAPTURED`.
 - `X-Fail-Order-Update: true` forces the order pay call to fail. It exists so that path can be tested.
-- WireMock 4 and Spring Boot 4.2 are still pre-release, so the build stays on WireMock 3.13.2 and Spring Boot 4.1.1.
+- WireMock 4 and Spring Boot 4.2 are still pre-release, so the build stays on WireMock 3.13.2 and Spring Boot 4.1.2.

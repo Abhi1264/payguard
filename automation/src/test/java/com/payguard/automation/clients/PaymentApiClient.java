@@ -9,6 +9,11 @@ public final class PaymentApiClient {
         return ApiResult.of(ApiClient.post(Config.paymentServiceUrl(), "/payments", request));
     }
 
+    public ApiResult create(CreatePaymentRequest request, String idempotencyKey) {
+        return ApiResult.of(ApiClient.post(
+                Config.paymentServiceUrl(), "/payments", request, "Idempotency-Key", idempotencyKey));
+    }
+
     public ApiResult createThatFailsOrderUpdate(CreatePaymentRequest request) {
         return ApiResult.of(ApiClient.post(
                 Config.paymentServiceUrl(), "/payments", request, "X-Fail-Order-Update", "true"));

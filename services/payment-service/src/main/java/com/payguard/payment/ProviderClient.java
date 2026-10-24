@@ -1,5 +1,6 @@
 package com.payguard.payment;
 
+import com.payguard.common.Correlation;
 import java.math.BigDecimal;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -50,7 +51,7 @@ public class ProviderClient {
                     .header(Correlation.HEADER, Correlation.current())
                     .body(body)
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                    .onStatus(HttpStatusCode::isError, (_, response) -> {
                         throw new ProviderException("Provider responded with " + response.getStatusCode().value());
                     })
                     .body(type);

@@ -1,4 +1,4 @@
-package com.payguard.order;
+package com.payguard.common;
 
 import java.time.Instant;
 

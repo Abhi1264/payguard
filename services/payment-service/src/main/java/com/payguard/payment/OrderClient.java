@@ -1,5 +1,7 @@
 package com.payguard.payment;
 
+import com.payguard.common.ApiException;
+import com.payguard.common.Correlation;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -25,10 +27,10 @@ public class OrderClient {
                     .uri("/orders/{id}", orderId)
                     .header(Correlation.HEADER, Correlation.current())
                     .retrieve()
-                    .onStatus(status -> status.value() == 404, (request, response) -> {
+                    .onStatus(status -> status.value() == 404, (_, _) -> {
                         throw new ApiException(404, "NOT_FOUND", "Order not found");
                     })
-                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                    .onStatus(HttpStatusCode::isError, (_, _) -> {
                         throw new ApiException(502, "INTERNAL_ERROR", "Order service error");
                     })
                     .body(OrderView.class);
@@ -60,7 +62,7 @@ public class OrderClient {
                                 headers.set("X-Fail-Order-Update", fault);
                             }
                         })
-                        .exchange((request, response) -> {
+                        .exchange((_, response) -> {
                             if (response.getStatusCode().isError()) {
                                 throw new ApiException(502, "INTERNAL_ERROR", failureMessage);
                             }

@@ -1,5 +1,6 @@
 package com.payguard.user;
 
+import com.payguard.common.ApiException;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;

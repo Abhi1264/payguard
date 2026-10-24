@@ -1,4 +1,4 @@
-package com.payguard.user;
+package com.payguard.common;
 
 import java.util.UUID;
 import org.slf4j.MDC;

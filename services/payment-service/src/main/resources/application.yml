@@ -14,8 +14,8 @@ spring:
       ddl-auto: none
     defer-datasource-initialization: true
     properties:
-      "[hibernate.default_schema]": paymentsvc
-      "[hibernate.jdbc.time_zone]": UTC
+      hibernate.default_schema: paymentsvc
+      hibernate.jdbc.time_zone: UTC
   sql:
     init:
       mode: always
